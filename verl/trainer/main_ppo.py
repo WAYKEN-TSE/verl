@@ -133,8 +133,20 @@ class TaskRunner:
         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
 
         from verl.utils.dataset.rl_dataset import collate_fn
-
+        '''train_dataset[0].keys()
+        #dict_keys(['data_source', 'ability', 'reward_model', 'extra_info', 'multi_modal_data', 'multi_modal_inputs', 
+        # 'input_ids', 'attention_mask', 'position_ids', 'raw_prompt_ids', 'index', 'tools_kwargs'])
+        len(train_dataset):2101
+        len(train_dataset[0]['input_ids']=1024 #data.max_prompt_length=1024
+        ----------------------------------------------------------------------------
+        processor：
+        Qwen2_5_VLProcessor:
+            - image_processor: Qwen2VLImageProcessorFast 
+            - tokenizer: Qwen2TokenizerFast
+        '''
         train_dataset = create_rl_dataset(config.data.train_files, config.data, tokenizer, processor)
+        print(train_dataset[0]["input_ids"])
+        # exit()
         val_dataset = create_rl_dataset(config.data.val_files, config.data, tokenizer, processor)
         train_sampler = create_rl_sampler(config.data, train_dataset)
         trainer = RayPPOTrainer(
@@ -187,7 +199,6 @@ def create_rl_dataset(data_paths, data_config, tokenizer, processor):
         processor=processor,
         config=data_config,
     )
-
     return dataset
 
 
