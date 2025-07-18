@@ -329,6 +329,11 @@ class DataProto:
     @classmethod
     def from_single_dict(cls, data: Dict[str, Union[torch.Tensor, np.ndarray]], meta_info=None, auto_padding=False):
         """Create a DataProto from a dict of tensors and non_tensors"""
+        '''
+        输入字典分为两类：
+        1. tensors：所有 torch.Tensor 类型的键值对
+        2. non_tensors：所有 np.ndarray 类型的键值对
+        '''
         tensors = {}
         non_tensors = {}
 
@@ -347,6 +352,13 @@ class DataProto:
         """Create a DataProto from a dict of tensors. This assumes that
         1. All the tensor in tensors have the same dim0
         2. Only dim0 is the batch dim
+        """
+        """
+        检查所有 tensors 是否有相同的 batch 维度大小（第 0 维度）。
+        将 non_tensors 中不是 np.ndarray 的值统一转换为 np.ndarray。
+        使用 TensorDict 封装 tensors，并记录 batch_size。   
+        根据 auto_padding 设置元信息 meta_info。
+        返回一个 DataProto 实例，包含 batch 和 non_tensor_batch 两个属性。
         """
 
         assert num_batch_dims > 0, "num_batch_dims must be greater than zero"
