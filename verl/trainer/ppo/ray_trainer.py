@@ -552,9 +552,9 @@ class RayPPOTrainer:
             dataset=self.train_dataset,
             batch_size=self.config.data.get("gen_batch_size", self.config.data.train_batch_size),
             num_workers=self.config.data.get("dataloader_num_workers", 8),
-            drop_last=True,
-            collate_fn=collate_fn,
-            sampler=train_sampler,
+            drop_last=True,#最后一批数据不足 batch_size 时，是否丢弃这批数据
+            collate_fn=collate_fn,#用于把一个 batch 的样本 合并成张量
+            sampler=train_sampler,#指定训练样本的采样策略:随机/自定义方式等
         )
 
         val_batch_size = self.config.data.val_batch_size  # Prefer config value if set
@@ -975,13 +975,22 @@ class RayPPOTrainer:
         self.global_steps += 1
         last_val_metrics = None
 
+        
         for epoch in range(self.config.trainer.total_epochs):
+            i=0
             for batch_dict in self.train_dataloader:
+                print("#"*100)
+                print(i,":",batch_dict.keys())
+                print(len(batch_dict['input_ids']))
+                i+=1
+                # print(batch_dict)
+                # exit()
                 metrics = {}
                 timing_raw = {}
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
                 '''
-                batch:
+                batch_dict.keys()batch.keys()包含以下12种,通过DataProto.from_single_dict将字典转换为DataProto
+                batch:包括两种类型key，
                 Tensor keys: ['input_ids', 'attention_mask', 'position_ids']
                 Non-tensor keys: ['data_source', 'ability', 'reward_model', 'extra_info',
                  'multi_modal_data', 'multi_modal_inputs', 'raw_prompt_ids', 'index', 'tools_kwargs']
@@ -1000,7 +1009,9 @@ class RayPPOTrainer:
                     non_tensor_batch_keys=non_tensor_batch_keys_to_pop,
                 )
                 # 查看对象类型和基本信息
-                
+                print("keys:")
+                print(gen_batch.batch.keys(),"\n",gen_batch.non_tensor_batch.keys())
+                exit()
                 '''
                 gen_batch:
                 Tensor keys: ['input_ids', 'attention_mask', 'position_ids']
@@ -1230,3 +1241,4 @@ class RayPPOTrainer:
                     pprint(f"Final validation metrics: {last_val_metrics}")
                     progress_bar.close()
                     return
+            exit()
