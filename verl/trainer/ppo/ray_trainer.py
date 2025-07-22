@@ -1028,8 +1028,9 @@ class RayPPOTrainer:
                             gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
                             '''
                             gen_batch_output:
-                            Tensor keys: ['attention_mask', 'responses', 'input_ids', 'position_ids', 'prompts', 'rollout_log_probs']
-                            Non-tensor keys: ['tools_kwargs']
+                            DataProto(batch=TensorDict(fields={
+                            Tensor keys: ['attention_mask', 'responses', 'input_ids', 'position_ids', 'prompts', 'rollout_log_probs']}
+                            non_tensor_batch keys: ['tools_kwargs','interaction_kwargs','meta_info']
                             '''
                         else:
                             self.async_rollout_manager.wake_up()
