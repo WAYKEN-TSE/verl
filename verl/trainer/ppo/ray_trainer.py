@@ -1028,9 +1028,19 @@ class RayPPOTrainer:
                             gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
                             '''
                             gen_batch_output:
-                            DataProto(batch=TensorDict(fields={
-                            Tensor keys: ['attention_mask', 'responses', 'input_ids', 'position_ids', 'prompts', 'rollout_log_probs']}
-                            non_tensor_batch keys: ['tools_kwargs','interaction_kwargs','meta_info']
+                            DataProto(batch=TensorDict(fields={Tensor keys: ['attention_mask', 'responses', 'input_ids', 'position_ids', 'prompts']}）
+                                      non_tensor_batch keys: ['tools_kwargs','interaction_kwargs','meta_info']
+                            gen_batch_output.batch:#batchsize*rollout.n=512*5=2560,seqlen=max_prompt_len+max_response_len=1024+2048=3072
+                                TensorDict(
+                                     fields={
+                                         attention_mask: Tensor(shape=torch.Size([2560, 3072]), device=cpu, dtype=torch.int64, is_shared=False),
+                                         input_ids: Tensor(shape=torch.Size([2560, 3072]), device=cpu, dtype=torch.int64, is_shared=False),
+                                         position_ids: Tensor(shape=torch.Size([2560, 3, 3072]), device=cpu, dtype=torch.int64, is_shared=False),
+                                         prompts: Tensor(shape=torch.Size([2560, 1024]), device=cpu, dtype=torch.int64, is_shared=False),
+                                         responses: Tensor(shape=torch.Size([2560, 2048]), device=cpu, dtype=torch.int64, is_shared=False)},
+                                     batch_size=torch.Size([2560]),
+                                     device=cpu,
+                                     is_shared=False)
                             '''
                         else:
                             self.async_rollout_manager.wake_up()
