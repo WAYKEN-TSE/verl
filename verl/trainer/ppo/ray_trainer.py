@@ -1024,7 +1024,7 @@ class RayPPOTrainer:
                     # generate a batch
                     with _timer("gen", timing_raw):
                         if not self.async_rollout_mode:
-                            #actor_rollout_wg:verl.workers.fsdp_workers.py:
+                            #actor_rollout_wg:verl.workers.fsdp_workers.py/megatron_workers
                             gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
                             '''
                             gen_batch_output:
