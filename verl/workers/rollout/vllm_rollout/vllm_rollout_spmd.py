@@ -248,6 +248,26 @@ class vLLMRollout(BaseRollout):
         else:
             vllm_inputs = [{"prompt_token_ids": raw_prompt_ids} for raw_prompt_ids in non_tensor_batch.pop("raw_prompt_ids")]
 
+        ##################################
+        #test
+        # raw_prompt="<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>Please answer the question based on the input image<|im_end|>\n<|im_start|>assistant\n"
+        # raw_prompt_ids = self.tokenizer.encode(raw_prompt, add_special_tokens=False)
+        
+        # from verl.utils.dataset.vision_utils import process_image
+
+        # images = [process_image(image) for image in [{'image_url': 'https://paddlenlp.bj.bcebos.com/data/images/dog.png'}]]
+        # vllm_inputs=[{"prompt_token_ids":raw_prompt_ids,"multi_modal_data":{"image":images}}]
+        # print("images:",images)
+        # print(vllm_inputs) 
+        # print("vllm_input:")
+        # print(vllm_inputs)
+        # print("*"*100)
+        # exit()
+        #######################################
+
+
+      
+
         # ensure the type of `prompt_token_ids` passed to vllm is list[int]
         # https://github.com/volcengine/verl/pull/772
         for input_data in vllm_inputs:
