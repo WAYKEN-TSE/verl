@@ -987,6 +987,134 @@ class RayPPOTrainer:
                 # exit()
                 metrics = {}
                 timing_raw = {}
+
+                ########################################################################################################################
+                import re
+                def create_my_data(rd):
+                    import requests
+                    from PIL import Image
+                    from io import BytesIO
+                    url = 'https://paddlenlp.bj.bcebos.com/data/images/dog.png'
+                    # 下载图片
+                    response = requests.get(url)
+                    response.raise_for_status()  # 检查是否下载成功
+                    # 将字节流转换为 PIL 图像对象
+                    image = Image.open(BytesIO(response.content))
+                    # print(rd["prompt"])
+                    # rd.pop('images')
+                    rd['images']=[]
+                    rd['images'].append({'image_url':url})
+                    rd['prompts']=[{'content':"<image>Please answer the question based on the input image",'role':"user"}]
+                        
+                def _build_messages(example: dict):
+                    messages: list = example.pop("prompts")
+                    # exit()
+                    if "images" in example :
+                        for message in messages:
+                            content = message["content"]
+                            content_list = []
+                            segments = re.split("(<image>|<video>)", content)
+                            segments = [item for item in segments if item != ""]
+                            for segment in segments:
+                                if segment == "<image>":
+                                    content_list.append({"type": "image"})
+                                elif segment == "<video>":
+                                    content_list.append({"type": "video"})
+                                else:
+                                    content_list.append({"type": "text", "text": segment})
+
+                            message["content"] = content_list
+                    return messages
+                
+                batch_dict={}
+                create_my_data(batch_dict)
+                # print("origin:",batch_dict)
+                
+                messages =_build_messages(batch_dict)
+                # print("messages:",messages)
+                from verl.utils.dataset.vision_utils import process_image, process_video
+
+                raw_prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+                # print("raw_prompt",raw_prompt)
+                multi_modal_data = {}
+
+                images = None
+                images = [process_image(image) for image in batch_dict.pop("images")]
+                # print("34"*50)
+                multi_modal_data["image"] = images
+                # print("images:",images)
+                videos = None
+                model_inputs = self.processor(text=[raw_prompt], images=images, videos=videos, return_tensors="pt")
+                input_ids = model_inputs.pop("input_ids")
+                # print("model_inputs:",model_inputs)
+                # exit()
+                attention_mask = model_inputs.pop("attention_mask")
+                # print("attention_mask:",attention_mask.shape)
+                batch_dict["multi_modal_data"] =np.array([multi_modal_data], dtype=object)
+                # print("multi_modal_data:",batch_dict["multi_modal_data"] )
+                # print("model_input_type:",type(model_inputs))
+                # print("model_inputs:",model_inputs)
+                # batch_dict["multi_modal_inputs"] = np.array([model_inputs], dtype=object)
+                multi_modal_inputs={}
+                # print("model_inputs_key:",model_inputs.keys())
+                pixel_values=model_inputs["pixel_values"]
+                image_grid_thw=model_inputs["image_grid_thw"]
+                multi_modal_inputs["pixel_values"]=pixel_values
+                multi_modal_inputs["image_grid_thw"]=image_grid_thw
+                batch_dict["multi_modal_inputs"] = np.array([multi_modal_inputs], dtype=object)
+                # print("keys:", batch_dict["multi_modal_inputs"][0].keys())
+                # print("multi_modal_inputs:",batch_dict["multi_modal_inputs"] )
+                # print("multi_modal_inputs0:",batch_dict["multi_modal_inputs"][0])
+                # exit()
+                # batch_dict["multi_modal_inputs"].pop("second_per_grid_ts", None)
+                import verl.utils.torch_functional as verl_F
+                input_ids, attention_mask = verl_F.postprocess_data(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    max_length=1024,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    left_pad=True,
+                    truncation="error",
+                )
+                # print("post input_ids:",input_ids[0].shape)
+                from verl.models.transformers.qwen2_vl import get_rope_index
+                position_ids = [
+                    get_rope_index(
+                        self.processor,
+                        input_ids=input_ids[0],
+                        image_grid_thw=model_inputs.get("image_grid_thw"),
+                        video_grid_thw=model_inputs.get("video_grid_thw"),
+                        second_per_grid_ts=model_inputs.get("second_per_grid_ts"),
+                        attention_mask=attention_mask[0],
+                    )
+                ] 
+                batch_dict["input_ids"] = input_ids
+                batch_dict["attention_mask"] = attention_mask
+                # print(position_ids)
+                # print("position_ids",position_ids.shape)
+                batch_dict["position_ids"] = position_ids[0].unsqueeze(0)
+                # print("position_ids",batch_dict["position_ids"].shape)
+                raw_prompt_ids = self.tokenizer.encode(raw_prompt, add_special_tokens=False)
+                batch_dict["raw_prompt_ids"] = np.array([raw_prompt_ids])
+                # print("raw_prompt_ids",raw_prompt_ids)
+                index = batch_dict.get("extra_info", {}).get("index", 0)
+                tools_kwargs = batch_dict.get("extra_info", {}).get("tools_kwargs", {})
+                interaction_kwargs = batch_dict.get("extra_info", {}).get("interaction_kwargs", {})
+                need_tools_kwargs = batch_dict.get("extra_info", {}).get("need_tools_kwargs", False)
+                if need_tools_kwargs and not tools_kwargs:
+                    logger.warning("tools_kwargs is empty for index {}, data source: {}", index, batch_dict["data_source"])
+                batch_dict["index"] = torch.tensor([index])
+                batch_dict["reward_model"]=np.array([{"ground_truth":'0.3',"style":'rule'}])
+                # batch_dict["tools_kwargs"] = torch.tensor([tools_kwargs])
+                # batch_dict["interaction_kwargs"] = torch.tensor([interaction_kwargs])
+                # print("batch_dict:")
+                # print(batch_dict)
+                # print("*"*100)
+                # exit()
+
+
+
+                #######################################################################################################
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
                 '''
                 batch_dict.keys()batch.keys()包含以下12种,通过DataProto.from_single_dict将字典转换为DataProto
